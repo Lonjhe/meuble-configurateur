@@ -6,7 +6,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.min.js"></script>
+    <script src="https://unpkg.com/fflate"></script>
+    <script>
+        // FORÇAGE : On s'assure que Three.js trouve "fflate" peu importe comment il est chargé
+        window.fflate = window.fflate || fflate;
+    </script>
     
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/USDZExporter.js"></script>
@@ -26,20 +30,16 @@
         
         .config-panel { width: 320px; background: var(--white); padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 5; overflow-y: auto; border-right: 1px solid var(--border); }
         .config-panel h3 { margin: 20px 0 10px 0; font-size: 0.9rem; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 5px; text-transform: uppercase; }
-        .config-panel h3:first-child { margin-top: 0; }
         
         .config-group { margin-bottom: 12px; }
         .config-group label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.75rem; color: #666; }
         .config-group input, .config-group select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; }
         
-        .checkbox-group { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: bold; color: var(--primary); margin: 15px 0; }
-
         .btn-ar { margin-top: 10px; padding: 12px; background: var(--ar-color); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; }
         .btn-ar:hover { background: #333; transform: scale(1.02); }
         .btn-generate { margin-top: 15px; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; }
 
         #three-container { flex: 1; background: #ced6e0; position: relative; }
-        .ui-hint { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.8); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -61,7 +61,6 @@
                 
                 <h3>Matériaux</h3>
                 <div class="config-group"><label>Bois Structure (mm)</label><input type="number" id="epS" value="18"></div>
-                <div class="config-group"><label>Fond (mm)</label><input type="number" id="epF" value="5"></div>
                 <div class="config-group">
                     <label>Finition</label>
                     <select id="colorPicker">
@@ -69,20 +68,6 @@
                         <option value="0x5D4037">Noyer Sombre</option>
                         <option value="0xFFFFFF">Blanc Mat</option>
                         <option value="0x2C3E50">Gris Anthracite</option>
-                    </select>
-                </div>
-
-                <h3>Aménagement</h3>
-                <div class="config-group"><label>Nb Étagères</label><input type="number" id="s" value="4"></div>
-                <div class="config-group"><label>Recul (mm)</label><input type="number" id="recul" value="20"></div>
-                <label class="checkbox-group"><input type="checkbox" id="hasFond" checked> Inclure le fond</label>
-                
-                <div class="config-group">
-                    <label>Type de façade</label>
-                    <select id="portes">
-                        <option value="none">Ouvert</option>
-                        <option value="single">1 Porte</option>
-                        <option value="double" selected>2 Portes</option>
                     </select>
                 </div>
 
@@ -95,10 +80,7 @@
                     Générer la découpe
                 </button>
             </div>
-
-            <div id="three-container">
-                <div class="ui-hint">Clic gauche : Rotation | Clic droit : Pan</div>
-            </div>
+            <div id="three-container"></div>
         </div>
     </div>
 
@@ -109,7 +91,6 @@
             const container = document.getElementById('three-container');
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xe1e8ed);
-            
             const aspect = container.clientWidth / container.clientHeight;
             camera = new THREE.PerspectiveCamera(35, aspect, 10, 50000);
             camera.position.set(2500, 1500, 3500);
@@ -129,7 +110,6 @@
 
             meubleGroup = new THREE.Group();
             scene.add(meubleGroup);
-
             updateMeuble();
             animate();
         }
@@ -138,11 +118,8 @@
             const geom = new THREE.BoxGeometry(w, h, d);
             const mat = new THREE.MeshStandardMaterial({ color: parseInt(color), roughness: 0.7 });
             const mesh = new THREE.Mesh(geom, mat);
-            const edges = new THREE.EdgesGeometry(geom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x333333, opacity: 0.2, transparent: true }));
             const group = new THREE.Group();
             group.add(mesh);
-            group.add(line);
             group.position.set(x, y, z);
             return group;
         }
@@ -153,45 +130,33 @@
             const w = parseFloat(document.getElementById('w').value) || 0;
             const p = parseFloat(document.getElementById('p').value) || 0;
             const epS = parseFloat(document.getElementById('epS').value) || 18;
-            const epF = parseFloat(document.getElementById('epF').value) || 5;
-            const s = parseInt(document.getElementById('s').value) || 0;
-            const recul = parseFloat(document.getElementById('recul').value) || 0;
-            const fond = document.getElementById('hasFond').checked;
             const color = document.getElementById('colorPicker').value;
-            const porteType = document.getElementById('portes').value;
 
+            // Simple structure pour test
             meubleGroup.add(createBoard(epS, h, p, -w/2 + epS/2, h/2, 0, color));
             meubleGroup.add(createBoard(epS, h, p, w/2 - epS/2, h/2, 0, color));
             meubleGroup.add(createBoard(w - 2*epS, epS, p, 0, h - epS/2, 0, color));
             meubleGroup.add(createBoard(w - 2*epS, epS, p, 0, epS/2, 0, color));
-
-            if (fond) meubleGroup.add(createBoard(w - epS, h - epS, epF, 0, h/2, -p/2 + epF/2, color));
-
-            const shelfDepth = p - recul - (fond ? epF : 0);
-            const zOffset = -p/2 + (fond ? epF : 0) + (shelfDepth/2);
-            for(let i = 1; i <= s; i++) {
-                const yPos = (h / (s + 1)) * i;
-                meubleGroup.add(createBoard(w - 2*epS, epS, shelfDepth, 0, yPos, zOffset, color));
-            }
-
-            if(porteType !== 'none') {
-                const pColor = color === "0xFFFFFF" ? 0xecf0f1 : color;
-                if(porteType === 'single') meubleGroup.add(createBoard(w - 4, h - 4, 19, 0, h/2, p/2 + 10, pColor));
-                else {
-                    meubleGroup.add(createBoard(w/2 - 3, h - 4, 19, -w/4, h/2, p/2 + 10, pColor));
-                    meubleGroup.add(createBoard(w/2 - 3, h - 4, 19, w/4, h/2, p/2 + 10, pColor));
-                }
-            }
         }
 
         async function viewInAR() {
-            // Conversion mm -> mètres pour la RA
+            if (typeof THREE.USDZExporter === 'undefined') {
+                alert("L'exportateur USDZ n'est pas chargé correctement.");
+                return;
+            }
+
+            // Vérification fflate
+            if (typeof fflate === 'undefined') {
+                alert("La bibliothèque fflate manque à l'appel.");
+                return;
+            }
+
             const exportGroup = meubleGroup.clone();
-            exportGroup.scale.set(0.001, 0.001, 0.001); 
+            exportGroup.scale.set(0.001, 0.001, 0.001); // mm -> m
 
             const exporter = new THREE.USDZExporter();
             try {
-                // USDZExporter utilise la bibliothèque fflate chargée plus haut
+                // L'exportateur utilise 'fflate' globalement
                 const arraybuffer = await exporter.parse(exportGroup);
                 const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
                 const url = URL.createObjectURL(blob);
@@ -201,7 +166,8 @@
                 a.href = url;
                 a.click();
             } catch (err) {
-                alert("Erreur lors de la génération RA : " + err);
+                console.error(err);
+                alert("Erreur de génération : " + err.message);
             }
         }
 
@@ -209,14 +175,7 @@
             const data = {
                 hauteur: document.getElementById('h').value,
                 largeur: document.getElementById('w').value,
-                profondeur: document.getElementById('p').value,
-                epS: document.getElementById('epS').value,
-                epF: document.getElementById('epF').value,
-                nbShelves: document.getElementById('s').value,
-                recul: document.getElementById('recul').value,
-                hasFond: document.getElementById('hasFond').checked,
-                porteType: document.getElementById('portes').value,
-                color: document.getElementById('colorPicker').value
+                profondeur: document.getElementById('p').value
             };
             localStorage.setItem('meubleProject', JSON.stringify(data));
             window.location.href = 'decoupe.html';
