@@ -2,54 +2,34 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Meuble Studio Pro - Conception 3D</title>
+    <title>Meuble Studio Pro - Conception & RA iOS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/USDZExporter.js"></script>
+    
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; --white: #ffffff; --border: #dcdde1; }
+        :root { --primary: #2c3e50; --accent: #3498db; --ar-ios: #000000; --bg: #f4f7f6; --white: #ffffff; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; }
         
-        /* Navigation Latérale */
         .sidebar { width: 250px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; z-index: 20; }
-        .sidebar h2 { font-size: 1.1rem; margin-bottom: 30px; border-bottom: 1px solid #3e5871; padding-bottom: 10px; opacity: 0.8; }
-        .sidebar a { color: #bdc3c7; text-decoration: none; padding: 12px; border-radius: 6px; margin-bottom: 5px; display: block; transition: 0.2s; }
-        .sidebar a:hover { background: #34495e; color: white; }
+        .sidebar a { color: #bdc3c7; text-decoration: none; padding: 12px; border-radius: 6px; margin-bottom: 5px; display: block; }
         .sidebar a.active { background: var(--accent); color: white; font-weight: bold; }
 
-        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; }
-        .workspace { display: flex; flex: 1; overflow: hidden; }
-        
-        /* Panneau de configuration */
-        .config-panel { width: 300px; background: var(--white); padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 5; overflow-y: auto; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .config-panel h3 { margin-top: 0; font-size: 1rem; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 5px; margin-bottom: 20px; }
-        
+        .config-panel { width: 300px; background: var(--white); padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 5; overflow-y: auto; }
         .config-group { margin-bottom: 15px; }
         .config-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #666; text-transform: uppercase; }
-        .config-group input[type="number"], .config-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; background: #fafafa; }
+        .config-group input, .config-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
         
-        .checkbox-group { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
-
-        /* Bouton Générer */
-        .btn-generate { 
-            margin-top: 20px; 
-            padding: 15px; 
-            background: var(--success); 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2);
+        /* Bouton RA iOS Style Apple */
+        .btn-ar-ios { 
+            margin-top: 10px; padding: 15px; background: var(--ar-ios); color: white; 
+            border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-size: 0.9rem; transition: 0.3s;
         }
-        .btn-generate:hover { background: #219150; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(39, 174, 96, 0.3); }
-        .btn-generate:active { transform: translateY(0); }
+        .btn-ar-ios:hover { background: #333; transform: scale(1.02); }
 
-        /* Zone 3D */
-        #three-container { flex: 1; background: #ced6e0; position: relative; }
-        .ui-overlay { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 8px; font-size: 0.8rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); pointer-events: none; }
+        #three-container { flex: 1; background: #e1e8ed; }
     </style>
 </head>
 <body>
@@ -61,216 +41,131 @@
         <a href="cout.html">💶 Analyse des Coûts</a>
     </nav>
 
-    <div class="main-content">
-        <div class="workspace">
-            <div class="config-panel">
-                <h3>Dimensions (mm)</h3>
-                <div class="config-group">
-                    <label>Hauteur</label>
-                    <input type="number" id="h" value="2000">
-                </div>
-                <div class="config-group">
-                    <label>Largeur</label>
-                    <input type="number" id="w" value="1000">
-                </div>
-                <div class="config-group">
-                    <label>Profondeur</label>
-                    <input type="number" id="p" value="500">
-                </div>
-                
-                <h3>Finition</h3>
-                <div class="config-group">
-                    <label>Couleur du bois</label>
-                    <select id="colorPicker">
-                        <option value="0xE3C9A6">Chêne Clair</option>
-                        <option value="0x5D4037">Noyer Sombre</option>
-                        <option value="0xFFFFFF">Blanc Mat</option>
-                        <option value="0x2C3E50">Gris Anthracite</option>
-                        <option value="0xdeb887">Hêtre</option>
-                    </select>
-                </div>
+    <div class="main-content" style="flex:1; display:flex;">
+        <div class="config-panel">
+            <h3>Dimensions (mm)</h3>
+            <div class="config-group"><label>Hauteur</label><input type="number" id="h" value="2000" oninput="updateMeuble()"></div>
+            <div class="config-group"><label>Largeur</label><input type="number" id="w" value="1000" oninput="updateMeuble()"></div>
+            <div class="config-group"><label>Profondeur</label><input type="number" id="p" value="500" oninput="updateMeuble()"></div>
+            
+            <h3>Réalité Augmentée</h3>
+            <button class="btn-ar-ios" onclick="viewInAR()">
+                 Voir en RA (iPhone)
+            </button>
+            <p style="font-size: 0.65rem; color: #999; text-align: center; margin-top: 10px;">
+                Nécessite iOS 12+ pour le mode Quick Look.
+            </p>
 
-                <h3>Aménagement</h3>
-                <div class="config-group">
-                    <label>Nb Étagères</label>
-                    <input type="number" id="s" value="3" min="0">
-                </div>
-                <div class="config-group">
-                    <label>Recul étagères (mm)</label>
-                    <input type="number" id="recul" value="20" min="0">
-                </div>
-                
-                <label class="checkbox-group">
-                    <input type="checkbox" id="fond" checked> Fond de meuble (5mm)
-                </label>
-
-                <div class="config-group" style="margin-top:20px;">
-                    <label>Type de Façade</label>
-                    <select id="portes">
-                        <option value="none">Ouvert (Sans porte)</option>
-                        <option value="single">1 Grande Porte</option>
-                        <option value="double" selected>2 Portes Battantes</option>
-                    </select>
-                </div>
-
-                <button class="btn-generate" onclick="generateProject()">
-                    Générer découpe & perçage
-                </button>
+            <hr>
+            <div class="config-group">
+                <label>Aménagement</label>
+                <select id="portes" onchange="updateMeuble()">
+                    <option value="none">Meuble Ouvert</option>
+                    <option value="single">1 Porte Unique</option>
+                    <option value="double" selected>2 Portes Battantes</option>
+                </select>
             </div>
-
-            <div id="three-container">
-                <div class="ui-overlay">
-                    <strong>Contrôles 3D</strong><br>
-                    • Rotation : Clic Gauche<br>
-                    • Zoom : Molette<br>
-                    • Pan : Clic Droit
-                </div>
-            </div>
+            <button style="width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;" onclick="saveAndGo()">
+                Générer Découpes
+            </button>
         </div>
+
+        <div id="three-container" style="flex:1;"></div>
     </div>
 
     <script>
         let scene, camera, renderer, controls, meubleGroup;
 
         function init() {
-    const container = document.getElementById('three-container');
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xe1e8ed);
-    
-    // FOV réduit à 35 pour éviter la distorsion des angles
-    const aspect = container.clientWidth / container.clientHeight;
-    camera = new THREE.PerspectiveCamera(35, aspect, 10, 50000);
-    
-    // Position de départ équilibrée
-    camera.position.set(2500, 1500, 3500);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    // Important pour le réalisme des couleurs
-    renderer.outputEncoding = THREE.sRGBEncoding; 
-    container.appendChild(renderer.domElement);
-
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    
-    // Ajustement de la lumière pour ne pas "aplatir" le volume
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-    
-    const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    sunLight.position.set(2000, 4000, 2000);
-    scene.add(sunLight);
-
-    meubleGroup = new THREE.Group();
-    scene.add(meubleGroup);
-
-    updateMeuble();
-    animate();
-}
-
-// Et pour le redimensionnement de la fenêtre :
-window.addEventListener('resize', () => {
-    const container = document.getElementById('three-container');
-    if(!container) return;
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-});
-
-        function createBoard(w, h, d, x, y, z, color, isDoor = false) {
-            const group = new THREE.Group();
-            const geometry = new THREE.BoxGeometry(w, h, d);
-            const material = new THREE.MeshStandardMaterial({ 
-                color: parseInt(color),
-                roughness: 0.8,
-                metalness: 0.05,
-                transparent: isDoor,
-                opacity: isDoor ? 0.85 : 1.0
-            });
+            const container = document.getElementById('three-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xe1e8ed);
             
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            group.add(mesh);
+            camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 1, 10000);
+            camera.position.set(2000, 1500, 3000);
 
-            const edges = new THREE.EdgesGeometry(geometry);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x333333, opacity: 0.3, transparent: true }));
-            group.add(line);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
 
-            group.position.set(x, y, z);
-            return group;
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const light = new THREE.DirectionalLight(0xffffff, 0.5);
+            light.position.set(2000, 4000, 2000);
+            scene.add(light);
+
+            meubleGroup = new THREE.Group();
+            scene.add(meubleGroup);
+
+            updateMeuble();
+            animate();
+        }
+
+        function createBoard(w, h, d, x, y, z) {
+            const geom = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xE3C9A6, roughness: 0.6 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, y, z);
+            return mesh;
         }
 
         function updateMeuble() {
             while(meubleGroup.children.length > 0) meubleGroup.remove(meubleGroup.children[0]);
 
-            const h = parseFloat(document.getElementById('h').value) || 10;
-            const w = parseFloat(document.getElementById('w').value) || 10;
-            const p = parseFloat(document.getElementById('p').value) || 10;
-            const s = parseInt(document.getElementById('s').value) || 0;
-            const recul = parseFloat(document.getElementById('recul').value) || 0;
-            const hasFond = document.getElementById('fond').checked;
-            const porteType = document.getElementById('portes').value;
-            const woodColor = document.getElementById('colorPicker').value;
-            
+            const h = parseFloat(document.getElementById('h').value) || 1000;
+            const w = parseFloat(document.getElementById('w').value) || 1000;
+            const p = parseFloat(document.getElementById('p').value) || 400;
+            const porte = document.getElementById('portes').value;
             const ep = 18;
-            const epFond = 5;
 
-            meubleGroup.add(createBoard(ep, h, p, -w/2 + ep/2, h/2, 0, woodColor));
-            meubleGroup.add(createBoard(ep, h, p, w/2 - ep/2, h/2, 0, woodColor));
-            meubleGroup.add(createBoard(w - 2*ep, ep, p, 0, h - ep/2, 0, woodColor));
-            meubleGroup.add(createBoard(w - 2*ep, ep, p, 0, ep/2, 0, woodColor));
+            // Dessin simplifié pour la RA (sans lignes d'arêtes pour optimiser l'export)
+            meubleGroup.add(createBoard(ep, h, p, -w/2 + ep/2, h/2, 0)); // G
+            meubleGroup.add(createBoard(ep, h, p, w/2 - ep/2, h/2, 0));  // D
+            meubleGroup.add(createBoard(w - 2*ep, ep, p, 0, h - ep/2, 0)); // Top
+            meubleGroup.add(createBoard(w - 2*ep, ep, p, 0, ep/2, 0)); // Bas
 
-            if (hasFond) {
-                meubleGroup.add(createBoard(w - ep, h - ep, epFond, 0, h/2, -p/2 + epFond/2, woodColor));
-            }
-
-            const shelfMaxDepth = p - (hasFond ? epFond : 0);
-            const shelfDepth = Math.max(10, shelfMaxDepth - recul);
-            const zPos = -p/2 + (hasFond ? epFond : 0) + (shelfDepth / 2);
-
-            for(let i = 1; i <= s; i++) {
-                const yPos = (h / (s + 1)) * i;
-                meubleGroup.add(createBoard(w - 2*ep, ep, shelfDepth, 0, yPos, zPos, woodColor));
-            }
-
-            const doorThickness = 19;
-            const doorColor = woodColor === "0xFFFFFF" ? 0xecf0f1 : woodColor;
-
-            if(porteType === 'single') {
-                meubleGroup.add(createBoard(w - 4, h - 4, doorThickness, 0, h/2, p/2 + doorThickness/2, doorColor, true));
-            } else if(porteType === 'double') {
-                meubleGroup.add(createBoard(w/2 - 3, h - 4, doorThickness, -w/4, h/2, p/2 + doorThickness/2, doorColor, true));
-                meubleGroup.add(createBoard(w/2 - 3, h - 4, doorThickness, w/4, h/2, p/2 + doorThickness/2, doorColor, true));
+            if(porte === 'double') {
+                const doorMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.4 });
+                const d1 = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 4, h - 4, 19), doorMat);
+                d1.position.set(-w/4, h/2, p/2 + 10);
+                const d2 = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 4, h - 4, 19), doorMat);
+                d2.position.set(w/4, h/2, p/2 + 10);
+                meubleGroup.add(d1, d2);
             }
         }
 
-        // --- FONCTION DE GÉNÉRATION ---
-        function generateProject() {
-            // Collecte des données
-            const projectData = {
+        // --- MAGIE RA iOS ---
+        async function viewInAR() {
+            const exporter = new THREE.USDZExporter();
+            // L'exportateur convertit le meubleGroup en binaire USDZ
+            const arraybuffer = await exporter.parse(meubleGroup);
+            const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
+            
+            // Création du lien invisible pour Quick Look
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('rel', 'ar');
+            a.appendChild(document.createElement('img')); // Requis par iOS
+            a.href = url;
+            a.click(); // Lance ARKit
+            
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        function saveAndGo() {
+            // Sauvegarde classique pour decoupe.html
+            const data = {
                 hauteur: document.getElementById('h').value,
                 largeur: document.getElementById('w').value,
                 profondeur: document.getElementById('p').value,
-                nbShelves: document.getElementById('s').value,
-                recul: document.getElementById('recul').value,
-                hasFond: document.getElementById('fond').checked,
                 porteType: document.getElementById('portes').value,
-                color: document.getElementById('colorPicker').value,
-                timestamp: new Date().getTime()
+                hasFond: true, nbShelves: 3, recul: 20
             };
-
-            // Sauvegarde dans le LocalStorage
-            localStorage.setItem('meubleProject', JSON.stringify(projectData));
-
-            // Feedback visuel avant redirection
-            const btn = document.querySelector('.btn-generate');
-            btn.innerHTML = "Génération en cours...";
-            btn.style.background = "#3498db";
-
-            setTimeout(() => {
-                window.location.href = 'decoupe.html';
-            }, 800);
+            localStorage.setItem('meubleProject', JSON.stringify(data));
+            window.location.href = 'decoupe.html';
         }
 
         function animate() {
@@ -279,18 +174,7 @@ window.addEventListener('resize', () => {
             renderer.render(scene, camera);
         }
 
-        window.addEventListener('resize', () => {
-            const container = document.getElementById('three-container');
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-
-        document.querySelectorAll('input, select').forEach(el => {
-            el.addEventListener('input', updateMeuble);
-        });
-
-        init();
+        window.onload = init;
     </script>
 </body>
 </html>
