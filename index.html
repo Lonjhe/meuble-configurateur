@@ -5,6 +5,9 @@
     <title>Meuble Studio Pro - Conception & RA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/USDZExporter.js"></script>
     
@@ -12,7 +15,6 @@
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --ar-color: #000000; --bg: #f4f7f6; --white: #ffffff; --border: #dcdde1; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; }
         
-        /* Navigation Latérale */
         .sidebar { width: 250px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; z-index: 20; }
         .sidebar h2 { font-size: 1.1rem; margin-bottom: 30px; border-bottom: 1px solid #3e5871; padding-bottom: 10px; opacity: 0.8; }
         .sidebar a { color: #bdc3c7; text-decoration: none; padding: 12px; border-radius: 6px; margin-bottom: 5px; display: block; transition: 0.2s; }
@@ -22,7 +24,6 @@
         .main-content { flex: 1; display: flex; flex-direction: column; position: relative; }
         .workspace { display: flex; flex: 1; overflow: hidden; }
         
-        /* Panneau de configuration */
         .config-panel { width: 320px; background: var(--white); padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 5; overflow-y: auto; border-right: 1px solid var(--border); }
         .config-panel h3 { margin: 20px 0 10px 0; font-size: 0.9rem; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 5px; text-transform: uppercase; }
         .config-panel h3:first-child { margin-top: 0; }
@@ -33,13 +34,10 @@
         
         .checkbox-group { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: bold; color: var(--primary); margin: 15px 0; }
 
-        /* Boutons */
         .btn-ar { margin-top: 10px; padding: 12px; background: var(--ar-color); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; }
         .btn-ar:hover { background: #333; transform: scale(1.02); }
         .btn-generate { margin-top: 15px; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; }
-        .btn-generate:hover { background: #219150; }
 
-        /* Zone 3D */
         #three-container { flex: 1; background: #ced6e0; position: relative; }
         .ui-hint { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.8); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; pointer-events: none; }
     </style>
@@ -61,9 +59,9 @@
                 <div class="config-group"><label>Largeur</label><input type="number" id="w" value="1200"></div>
                 <div class="config-group"><label>Profondeur</label><input type="number" id="p" value="600"></div>
                 
-                <h3>Matériaux (Épaisseurs)</h3>
+                <h3>Matériaux</h3>
                 <div class="config-group"><label>Bois Structure (mm)</label><input type="number" id="epS" value="18"></div>
-                <div class="config-group"><label>Fond de meuble (mm)</label><input type="number" id="epF" value="5"></div>
+                <div class="config-group"><label>Fond (mm)</label><input type="number" id="epF" value="5"></div>
                 <div class="config-group">
                     <label>Finition</label>
                     <select id="colorPicker">
@@ -75,16 +73,16 @@
                 </div>
 
                 <h3>Aménagement</h3>
-                <div class="config-group"><label>Nombre d'étagères</label><input type="number" id="s" value="4"></div>
-                <div class="config-group"><label>Recul avant étagères (mm)</label><input type="number" id="recul" value="20"></div>
+                <div class="config-group"><label>Nb Étagères</label><input type="number" id="s" value="4"></div>
+                <div class="config-group"><label>Recul (mm)</label><input type="number" id="recul" value="20"></div>
                 <label class="checkbox-group"><input type="checkbox" id="hasFond" checked> Inclure le fond</label>
                 
                 <div class="config-group">
                     <label>Type de façade</label>
                     <select id="portes">
                         <option value="none">Ouvert</option>
-                        <option value="single">1 Porte Unique</option>
-                        <option value="double" selected>2 Portes Battantes</option>
+                        <option value="single">1 Porte</option>
+                        <option value="double" selected>2 Portes</option>
                     </select>
                 </div>
 
@@ -99,7 +97,7 @@
             </div>
 
             <div id="three-container">
-                <div class="ui-hint">Rotation : Clic gauche | Zoom : Molette | Pan : Clic droit</div>
+                <div class="ui-hint">Clic gauche : Rotation | Clic droit : Pan</div>
             </div>
         </div>
     </div>
@@ -112,7 +110,6 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xe1e8ed);
             
-            // Correction FOV (35) pour éviter la distorsion des proportions
             const aspect = container.clientWidth / container.clientHeight;
             camera = new THREE.PerspectiveCamera(35, aspect, 10, 50000);
             camera.position.set(2500, 1500, 3500);
@@ -138,24 +135,20 @@
         }
 
         function createBoard(w, h, d, x, y, z, color) {
-            const group = new THREE.Group();
-            const geometry = new THREE.BoxGeometry(w, h, d);
-            const material = new THREE.MeshStandardMaterial({ color: parseInt(color), roughness: 0.7 });
-            const mesh = new THREE.Mesh(geometry, material);
-            group.add(mesh);
-
-            // Arêtes pour voir les détails
-            const edges = new THREE.EdgesGeometry(geometry);
+            const geom = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: parseInt(color), roughness: 0.7 });
+            const mesh = new THREE.Mesh(geom, mat);
+            const edges = new THREE.EdgesGeometry(geom);
             const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x333333, opacity: 0.2, transparent: true }));
+            const group = new THREE.Group();
+            group.add(mesh);
             group.add(line);
-
             group.position.set(x, y, z);
             return group;
         }
 
         function updateMeuble() {
             while(meubleGroup.children.length > 0) meubleGroup.remove(meubleGroup.children[0]);
-
             const h = parseFloat(document.getElementById('h').value) || 0;
             const w = parseFloat(document.getElementById('w').value) || 0;
             const p = parseFloat(document.getElementById('p').value) || 0;
@@ -167,56 +160,44 @@
             const color = document.getElementById('colorPicker').value;
             const porteType = document.getElementById('portes').value;
 
-            // 1. Montants Côtés
             meubleGroup.add(createBoard(epS, h, p, -w/2 + epS/2, h/2, 0, color));
             meubleGroup.add(createBoard(epS, h, p, w/2 - epS/2, h/2, 0, color));
-
-            // 2. Traverses Haut et Bas
             meubleGroup.add(createBoard(w - 2*epS, epS, p, 0, h - epS/2, 0, color));
             meubleGroup.add(createBoard(w - 2*epS, epS, p, 0, epS/2, 0, color));
 
-            // 3. Fond
-            if (fond) {
-                meubleGroup.add(createBoard(w - epS, h - epS, epF, 0, h/2, -p/2 + epF/2, color));
-            }
+            if (fond) meubleGroup.add(createBoard(w - epS, h - epS, epF, 0, h/2, -p/2 + epF/2, color));
 
-            // 4. Étagères (Recul impacte l'avant)
             const shelfDepth = p - recul - (fond ? epF : 0);
             const zOffset = -p/2 + (fond ? epF : 0) + (shelfDepth/2);
-
             for(let i = 1; i <= s; i++) {
                 const yPos = (h / (s + 1)) * i;
                 meubleGroup.add(createBoard(w - 2*epS, epS, shelfDepth, 0, yPos, zOffset, color));
             }
 
-            // 5. Façades
             if(porteType !== 'none') {
                 const pColor = color === "0xFFFFFF" ? 0xecf0f1 : color;
-                if(porteType === 'single') {
-                    meubleGroup.add(createBoard(w - 4, h - 4, 19, 0, h/2, p/2 + 10, pColor));
-                } else {
+                if(porteType === 'single') meubleGroup.add(createBoard(w - 4, h - 4, 19, 0, h/2, p/2 + 10, pColor));
+                else {
                     meubleGroup.add(createBoard(w/2 - 3, h - 4, 19, -w/4, h/2, p/2 + 10, pColor));
                     meubleGroup.add(createBoard(w/2 - 3, h - 4, 19, w/4, h/2, p/2 + 10, pColor));
                 }
             }
         }
 
-        // --- FONCTION RÉALITÉ AUGMENTÉE (iOS USDZ) ---
         async function viewInAR() {
-            // On s'assure que le meuble est à l'échelle 1 (Three.js mm -> ARKit meters)
-            // Pour AR Quick Look, 1 unité Three.js = 1 mètre. On doit donc diviser par 1000.
+            // Conversion mm -> mètres pour la RA
             const exportGroup = meubleGroup.clone();
             exportGroup.scale.set(0.001, 0.001, 0.001); 
 
             const exporter = new THREE.USDZExporter();
             try {
+                // USDZExporter utilise la bibliothèque fflate chargée plus haut
                 const arraybuffer = await exporter.parse(exportGroup);
                 const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
                 const url = URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.setAttribute('rel', 'ar');
-                a.appendChild(document.createElement('img')); // Requis par iOS
+                a.appendChild(document.createElement('img'));
                 a.href = url;
                 a.click();
             } catch (err) {
@@ -224,7 +205,6 @@
             }
         }
 
-        // --- SAUVEGARDE ET GÉNÉRATION ---
         function saveAndGenerate() {
             const data = {
                 hauteur: document.getElementById('h').value,
@@ -256,7 +236,6 @@
         });
 
         document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', updateMeuble));
-
         init();
     </script>
 </body>
