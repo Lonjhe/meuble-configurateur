@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Meuble Studio Pro - Calepinage Expert MaxRects</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f1f2f6; --white: #ffffff; --border: #ced4da; --success: #2ed573; --danger: #ff4757; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; }
+        
+        .sidebar { width: 250px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
+        .sidebar h2 { font-size: 1.1rem; margin-bottom: 30px; border-bottom: 1px solid #3e5871; padding-bottom: 10px; }
+        .sidebar a { color: #bdc3c7; text-decoration: none; padding: 12px; border-radius: 6px; margin-bottom: 5px; display: block; }
+        .sidebar a.active { background: var(--accent); color: white; font-weight: bold; }
+
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Barre de contrôle */
+        .control-bar { background: var(--white); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; border: 1px solid var(--border); }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .input-group label { font-size: 0.7rem; font-weight: bold; color: #57606f; text-transform: uppercase; }
+        .input-group input { padding: 8px; border: 1px solid var(--border); border-radius: 4px; width: 90px; font-weight: bold; }
+        
+        .btn-run { background: #1e3799; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        /* Stats */
+        .report-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .report-card { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--accent); }
+        .report-card small { color: #a4b0be; font-size: 0.7rem; text-transform: uppercase; }
+        .report-card div { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+
+        /* Rendu des Plans */
+        .plans-container { display: flex; flex-direction: column; gap: 50px; align-items: center; background: #dfe4ea; padding: 40px; border-radius: 12px; }
+        .panel-wrap { position: relative; background: white; border: 2px solid #2f3542; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .panel-title { position: absolute; top: -30px; left: 0; font-weight: bold; font-size: 0.9rem; }
+        
+        .piece-rect { position: absolute; border: 1px solid #1e3799; background: rgba(74, 105, 189, 0.15); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; text-align: center; }
+        .piece-rect:hover { background: rgba(74, 105, 189, 0.3); z-index: 10; }
+        .rot-label { color: #e67e22; font-size: 14px; position: absolute; top: 2px; right: 2px; }
+
+        /* Nomenclature */
+        .nomenclature { background: white; padding: 25px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 50px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: #f1f2f6; padding: 12px; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #dfe4ea; }
+        td { padding: 12px; border-bottom: 1px solid #f1f2f6; font-size: 0.9rem; }
+        .tag { padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .tag-struct { background: #dff9fb; color: #130f40; }
+        .tag-etagere { background: #e3fced; color: #05c46b; }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>MEUBLE STUDIO</h2>
+        <a href="index.html">📦 Vue 3D</a>
+        <a href="decoupe.html" class="active">🪚 Découpe & Perçage</a>
+        <a href="notice.html">📖 Notice de Montage</a>
+        <a href="cout.html">💶 Analyse des Coûts</a>
+    </nav>
+
+    <div class="main-content">
+        <div class="control-bar">
+            <div class="input-group"><label>Plaque L x H</label><div style="display:flex;gap:5px;"><input type="number" id="sW" value="2500"><input type="number" id="sH" value="1200"></div></div>
+            <div class="input-group"><label>Ép. Structure</label><input type="number" id="epS" value="18"></div>
+            <div class="input-group"><label>Ép. Fond</label><input type="number" id="epF" value="5"></div>
+            <div class="input-group"><label>Lame (Kerf)</label><input type="number" id="kerf" value="4"></div>
+            <button class="btn-run" onclick="runMaxRects()">Optimisation Maximale</button>
+        </div>
+
+        <div class="report-grid">
+            <div class="report-card"><small>Plaques</small><div id="res-panels">0</div></div>
+            <div class="report-card"><small>Utilisation</small><div id="res-percent">0%</div></div>
+            <div class="report-card"><small>Chute Totale</small><div id="res-waste">0 m²</div></div>
+            <div class="report-card"><small>Pièces Placées</small><div id="res-count">0/0</div></div>
+        </div>
+
+        <div class="plans-container" id="plans-view"></div>
+
+        <div class="nomenclature">
+            <h3>Nomenclature des débits</h3>
+            <table>
+                <thead><tr><th>Type</th><th>Désignation</th><th>Qté</th><th>Dim X</th><th>Dim Y</th><th>Ép.</th></tr></thead>
+                <tbody id="tbody-parts"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function runMaxRects() {
+            const raw = localStorage.getItem('meubleProject');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+
+            // Params
+            const sW = parseFloat(document.getElementById('sW').value);
+            const sH = parseFloat(document.getElementById('sH').value);
+            const kerf = parseFloat(document.getElementById('kerf').value);
+            const epS = parseFloat(document.getElementById('epS').value);
+            const epF = parseFloat(document.getElementById('epF').value);
+
+            // Liste des pièces
+            const H = parseFloat(data.hauteur), W = parseFloat(data.largeur), P = parseFloat(data.profondeur);
+            const S = parseInt(data.nbShelves), R = parseFloat(data.recul);
+            const shelfD = P - R - (data.hasFond ? epF : 0);
+
+            let pieces = [
+                { cat: "struct", name: "Côté Vertical", qty: 2, w: H, h: P, ep: epS },
+                { cat: "struct", name: "Traverse H/B", qty: 2, w: W-(epS*2), h: P, ep: epS }
+            ];
+            if(S > 0) pieces.push({ cat: "etagere", name: "Étagère", qty: S, w: W-(epS*2), h: shelfD, ep: epS });
+            if(data.hasFond) pieces.push({ cat: "fond", name: "Fond", qty: 1, w: W-epS, h: H-epS, ep: epF });
+            if(data.porteType === 'single') pieces.push({ cat: "porte", name: "Porte Unique", qty: 1, w: W-4, h: H-4, ep: 19 });
+            else if(data.porteType === 'double') pieces.push({ cat: "porte", name: "Porte Battante", qty: 2, w: (W/2)-3, h: H-4, ep: 19 });
+
+            // Préparation nomenclature et liste plate
+            let flatList = [];
+            let tbody = document.getElementById('tbody-parts');
+            tbody.innerHTML = "";
+            let totalNetArea = 0;
+
+            pieces.forEach(p => {
+                totalNetArea += (p.w * p.h * p.qty);
+                tbody.innerHTML += `<tr><td><span class="tag tag-${p.cat}">${p.cat}</span></td><td>${p.name}</td><td>${p.qty}</td><td>${p.w}</td><td>${p.h}</td><td>${p.ep}</td></tr>`;
+                for(let i=0; i<p.qty; i++) flatList.push({...p});
+            });
+
+            // Tri par la plus grande dimension décroissante
+            flatList.sort((a,b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
+
+            // ALGORITHME MAXRECTS (Simplifié pour JS)
+            let panels = [];
+            
+            function findBestFit(piece, panel) {
+                let bestScore = Infinity;
+                let bestRectIdx = -1;
+                let rotated = false;
+
+                panel.freeRects.forEach((r, idx) => {
+                    // Test Normal
+                    if (piece.w <= r.w && piece.h <= r.h) {
+                        let score = Math.min(r.w - piece.w, r.h - piece.h);
+                        if (score < bestScore) { bestScore = score; bestRectIdx = idx; rotated = false; }
+                    }
+                    // Test Individuel de Rotation
+                    if (piece.h <= r.w && piece.w <= r.h) {
+                        let score = Math.min(r.w - piece.h, r.h - piece.w);
+                        if (score < bestScore) { bestScore = score; bestRectIdx = idx; rotated = true; }
+                    }
+                });
+
+                if (bestRectIdx !== -1) {
+                    let r = panel.freeRects[bestRectIdx];
+                    let w = rotated ? piece.h : piece.w;
+                    let h = rotated ? piece.w : piece.h;
+                    
+                    let placed = { ...piece, x: r.x, y: r.y, finalW: w, finalH: h, isRot: rotated };
+                    panel.usedPieces.push(placed);
+
+                    // Mise à jour des rectangles libres (Split)
+                    let newRects = [];
+                    // Split Vertical
+                    if (w < r.w) newRects.push({ x: r.x + w + kerf, y: r.y, w: r.w - w - kerf, h: r.h });
+                    // Split Horizontal
+                    if (h < r.h) newRects.push({ x: r.x, y: r.y + h + kerf, w: w, h: r.h - h - kerf });
+                    
+                    panel.freeRects.splice(bestRectIdx, 1);
+                    newRects.forEach(nr => { if(nr.w > 5 && nr.h > 5) panel.freeRects.push(nr); });
+                    
+                    return true;
+                }
+                return false;
+            }
+
+            flatList.forEach(p => {
+                let placed = false;
+                for (let pnl of panels) {
+                    if (findBestFit(p, pnl)) { placed = true; break; }
+                }
+                if (!placed) {
+                    let newPnl = { freeRects: [{ x: 0, y: 0, w: sW, h: sH }], usedPieces: [] };
+                    panels.push(newPnl);
+                    findBestFit(p, newPnl);
+                }
+            });
+
+            // RENDU VISUEL
+            const view = document.getElementById('plans-view');
+            view.innerHTML = "";
+            const scale = Math.min(800 / sW, 500 / sH);
+
+            panels.forEach((pnl, idx) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'panel-wrap';
+                wrap.style.width = (sW * scale) + 'px';
+                wrap.style.height = (sH * scale) + 'px';
+                wrap.innerHTML = `<div class="panel-title">PANNEAU #${idx + 1}</div>`;
+
+                pnl.usedPieces.forEach(pc => {
+                    const div = document.createElement('div');
+                    div.className = 'piece-rect';
+                    div.style.width = (pc.finalW * scale) + 'px';
+                    div.style.height = (pc.finalH * scale) + 'px';
+                    div.style.left = (pc.x * scale) + 'px';
+                    div.style.top = (pc.y * scale) + 'px';
+                    div.innerHTML = `<span>${pc.name}</span><span>${pc.finalW}x${pc.finalH}</span>`;
+                    if(pc.isRot) div.innerHTML += `<span class="rot-label">↺</span>`;
+                    wrap.appendChild(div);
+                });
+                view.appendChild(wrap);
+            });
+
+            const totalPnlArea = (sW * sH * panels.length) / 1000000;
+            const useRate = (totalNetArea / 1000000 / totalPnlArea) * 100;
+            document.getElementById('res-panels').innerText = panels.length;
+            document.getElementById('res-percent').innerText = useRate.toFixed(1) + "%";
+            document.getElementById('res-waste').innerText = (totalPnlArea - (totalNetArea/1000000)).toFixed(2) + " m²";
+            document.getElementById('res-count').innerText = flatList.length + "/" + flatList.length;
+        }
+
+        window.onload = runMaxRects;
+    </script>
+</body>
+</html>

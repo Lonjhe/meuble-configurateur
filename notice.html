@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Meuble Studio - Notice</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); }
+        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
+        .sidebar a { color: #bdc3c7; text-decoration: none; padding: 15px; border-radius: 6px; margin-bottom: 8px; display: block; }
+        .sidebar a.active { background: var(--accent); color: white; }
+        .main-content { flex: 1; padding: 30px; }
+        .step { background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #2ecc71; }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>MEUBLE STUDIO</h2>
+        <a href="index.html">📦 Vue 3D</a>
+        <a href="decoupe.html">🪚 Découpe & Perçage</a>
+        <a href="notice.html" class="active">📖 Notice de Montage</a>
+        <a href="cout.html">💶 Analyse des Coûts</a>
+    </nav>
+    <div class="main-content">
+        <h1>Notice de Montage</h1>
+        <div class="step"><strong>Étape 1 :</strong> Identifier les panneaux [1] et [2] pour les côtés.</div>
+        <div class="step"><strong>Étape 2 :</strong> Fixer le socle et le toit sur les cloisons verticales.</div>
+        <div class="step"><strong>Étape 3 :</strong> Insérer les étagères selon le réglage 3D choisi.</div>
+    </div>
+</body>
+</html>
