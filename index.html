@@ -2,7 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Configurateur Meuble Pro - Fix RA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meuble Studio Pro - RA Expert</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://unpkg.com/fflate"></script>
@@ -13,7 +14,7 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; }
         
         .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; z-index: 20; }
-        .sidebar h2 { font-size: 1.1rem; margin-bottom: 20px; border-bottom: 1px solid #3e5871; padding-bottom: 10px; }
+        .sidebar h2 { font-size: 1.1rem; margin-bottom: 25px; border-bottom: 1px solid #3e5871; padding-bottom: 10px; }
         .sidebar a { color: #bdc3c7; text-decoration: none; padding: 12px; border-radius: 6px; margin-bottom: 5px; display: block; }
         .sidebar a.active { background: var(--accent); color: white; font-weight: bold; }
 
@@ -28,11 +29,11 @@
         .btn-gen { margin-top: 15px; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; }
 
         #three-container { flex: 1; background: #ced6e0; position: relative; }
-        #ar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); color: white; display: none; align-items: center; justify-content: center; z-index: 1000; text-align: center; font-weight: bold; }
+        #ar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: white; display: none; align-items: center; justify-content: center; z-index: 1000; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="ar-overlay">Génération du modèle... <br> Préparez votre iPhone.</div>
+    <div id="ar-overlay">Calcul du modèle... <br> Scannez votre sol avec l'iPhone.</div>
 
     <nav class="sidebar">
         <h2>MEUBLE STUDIO</h2>
@@ -49,11 +50,9 @@
             <div class="config-group"><label>Largeur</label><input type="number" id="w" value="1200" oninput="updateMeuble()"></div>
             <div class="config-group"><label>Profondeur</label><input type="number" id="p" value="600" oninput="updateMeuble()"></div>
             
-            <h3>Options Techniques</h3>
+            <h3>Options</h3>
             <div class="config-group"><label>Épaisseur Bois (mm)</label><input type="number" id="epS" value="18" oninput="updateMeuble()"></div>
-            <div class="config-group"><label>Épaisseur Fond (mm)</label><input type="number" id="epF" value="5" oninput="updateMeuble()"></div>
             <div class="config-group"><label>Nb Étagères</label><input type="number" id="s" value="4" oninput="updateMeuble()"></div>
-            <div class="config-group"><label>Recul Étagères (mm)</label><input type="number" id="recul" value="20" oninput="updateMeuble()"></div>
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
                 <input type="checkbox" id="hasFond" checked onchange="updateMeuble()"> <label style="font-size:0.75rem; font-weight:bold;">Fond Arrière</label>
             </div>
@@ -67,15 +66,10 @@
                     <option value="0x2C3E50">Gris Anthracite</option>
                 </select>
             </div>
-            <div class="config-group">
-                <select id="portes" onchange="updateMeuble()">
-                    <option value="none">Meuble Ouvert</option>
-                    <option value="double" selected>2 Portes Battantes</option>
-                </select>
-            </div>
 
             <h3>Réalité Augmentée</h3>
             <button class="btn-ar" onclick="viewInAR()"> Placer dans ma pièce</button>
+            <p style="font-size:0.6rem; color:#888; text-align:center; margin-top:5px;">Détectez le sol pour faire apparaître la cible de pose.</p>
 
             <button class="btn-gen" onclick="saveAndGo()">Générer la découpe</button>
         </div>
@@ -89,10 +83,10 @@
         function init() {
             const container = document.getElementById('three-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xe1e8ed);
+            scene.background = new THREE.Color(0xf1f2f6);
             
             camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 1, 20000);
-            camera.position.set(2500, 1500, 3500);
+            camera.position.set(3000, 2000, 4000);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
@@ -103,13 +97,9 @@
             controls.enableDamping = true;
 
             scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            const light = new THREE.DirectionalLight(0xffffff, 0.5);
+            const light = new THREE.DirectionalLight(0xffffff, 0.4);
             light.position.set(2000, 4000, 2000);
             scene.add(light);
-
-            // Grille au sol pour centrage
-            const grid = new THREE.GridHelper(4000, 40, 0xbdc3c7, 0xdcdde1);
-            scene.add(grid);
 
             meubleGroup = new THREE.Group();
             scene.add(meubleGroup);
@@ -118,79 +108,67 @@
             animate();
         }
 
-        // Fonction de construction universelle (unitScale permet de passer de mm à m pour la RA)
-        function buildCabinet(unitScale = 1, isAR = false) {
-            const h = (parseFloat(document.getElementById('h').value) || 2000) * unitScale;
-            const w = (parseFloat(document.getElementById('w').value) || 1200) * unitScale;
-            const p = (parseFloat(document.getElementById('p').value) || 600) * unitScale;
-            const epS = (parseFloat(document.getElementById('epS').value) || 18) * unitScale;
-            const epF = (parseFloat(document.getElementById('epF').value) || 5) * unitScale;
-            const s = parseInt(document.getElementById('s').value) || 0;
-            const recul = (parseFloat(document.getElementById('recul').value) || 20) * unitScale;
-            const fond = document.getElementById('hasFond').checked;
-            const color = parseInt(document.getElementById('colorPicker').value);
-            const porteType = document.getElementById('portes').value;
-
-            const group = new THREE.Group();
-
-            const createPart = (pw, ph, pd, px, py, pz) => {
-                const geom = new THREE.BoxGeometry(pw, ph, pd);
-                const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
-                const mesh = new THREE.Mesh(geom, mat);
-                mesh.position.set(px, py, pz);
-                
-                if (!isAR) { // Arêtes uniquement pour le web
-                    const edges = new THREE.EdgesGeometry(geom);
-                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.1, transparent: true }));
-                    const pGroup = new THREE.Group();
-                    pGroup.add(mesh, line);
-                    return pGroup;
-                }
-                return mesh;
-            };
-
-            // Structure (Ancrage sol : y=0 est le bas)
-            group.add(createPart(epS, h, p, -w/2 + epS/2, h/2, 0)); // Gauche
-            group.add(createPart(epS, h, p, w/2 - epS/2, h/2, 0));  // Droite
-            group.add(createPart(w - 2*epS, epS, p, 0, h - epS/2, 0)); // Top
-            group.add(createPart(w - 2*epS, epS, p, 0, epS/2, 0)); // Bas
-
-            if (fond) group.add(createPart(w - epS, h - epS, epF, 0, h/2, -p/2 + epF/2));
-
-            const shelfD = p - recul - (fond ? epF : 0);
-            const zPos = -p/2 + (fond ? epF : 0) + (shelfD/2);
-            for(let i = 1; i <= s; i++) {
-                const yPos = (h / (s + 1)) * i;
-                group.add(createPart(w - 2*epS, epS, shelfD, 0, yPos, zPos));
+        // Création d'une planche propre
+        function createBoard(w, h, d, x, y, z, color, isAR = false) {
+            const geom = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7, metalness: 0.1 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, y, z);
+            
+            if (!isAR) {
+                const edges = new THREE.EdgesGeometry(geom);
+                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.1, transparent: true }));
+                const g = new THREE.Group();
+                g.add(mesh, line);
+                return g;
             }
-
-            if (porteType === 'double') {
-                const pColor = (color === 0xFFFFFF) ? 0xecf0f1 : color;
-                group.add(createPart(w/2 - (4*unitScale), h - (4*unitScale), 19*unitScale, -w/4, h/2, p/2 + (10*unitScale)));
-                group.add(createPart(w/2 - (4*unitScale), h - (4*unitScale), 19*unitScale, w/4, h/2, p/2 + (10*unitScale)));
-            }
-
-            return group;
+            return mesh;
         }
 
         function updateMeuble() {
             while(meubleGroup.children.length > 0) meubleGroup.remove(meubleGroup.children[0]);
             
             const h = parseFloat(document.getElementById('h').value) || 2000;
-            // Centrage de la caméra sur le meuble
+            const w = parseFloat(document.getElementById('w').value) || 1200;
+            const p = parseFloat(document.getElementById('p').value) || 600;
+            const epS = parseFloat(document.getElementById('epS').value) || 18;
+            const color = parseInt(document.getElementById('colorPicker').value);
+            const s = parseInt(document.getElementById('s').value) || 0;
+            const fond = document.getElementById('hasFond').checked;
+
             if(controls) controls.target.set(0, h/2, 0);
-            
-            meubleGroup.add(buildCabinet(1, false));
+
+            const build = (isAR) => {
+                const g = new THREE.Group();
+                // Montage : le bas du meuble est à Y=0
+                g.add(createBoard(epS, h, p, -w/2 + epS/2, h/2, 0, color, isAR));
+                g.add(createBoard(epS, h, p, w/2 - epS/2, h/2, 0, color, isAR));
+                g.add(createBoard(w - 2*epS, epS, p, 0, h - epS/2, 0, color, isAR));
+                g.add(createBoard(w - 2*epS, epS, p, 0, epS/2, 0, color, isAR));
+                
+                if(fond) g.add(createBoard(w - epS, h - epS, 5, 0, h/2, -p/2 + 2.5, color, isAR));
+                
+                for(let i=1; i<=s; i++) {
+                    const y = (h/(s+1))*i;
+                    g.add(createBoard(w - 2*epS, epS, p-20, 0, y, 10, color, isAR));
+                }
+                return g;
+            };
+
+            meubleGroup.add(build(false));
+            // Préparer la version AR sans lignes noires
+            window.lastARModel = build(true);
         }
 
         async function viewInAR() {
             const overlay = document.getElementById('ar-overlay');
             overlay.style.display = 'flex';
             
-            window.fflate = fflate; // Garantie pour USDZ
+            // On s'assure que fflate est chargé pour l'export USDZ
+            window.fflate = fflate;
 
-            // On construit le meuble DIRECTEMENT en mètres (0.001) pour éviter les erreurs d'échelle
-            const arModel = buildCabinet(0.001, true);
+            const arModel = window.lastARModel.clone();
+            arModel.scale.set(0.001, 0.001, 0.001); // mm -> m
 
             const exporter = new THREE.USDZExporter();
             try {
@@ -200,13 +178,16 @@
                 
                 const a = document.createElement('a');
                 a.setAttribute('rel', 'ar');
-                a.appendChild(document.createElement('img')); 
-                a.href = url;
+                // allowsContentScaling=0 force l'iPhone à rester en 1:1
+                a.href = url + "#allowsContentScaling=0";
+                
+                const img = document.createElement('img');
+                a.appendChild(img);
                 
                 overlay.style.display = 'none';
                 a.click();
             } catch (err) {
-                alert("Erreur RA : " + err.message);
+                alert("Erreur : " + err.message);
                 overlay.style.display = 'none';
             }
         }
@@ -217,11 +198,8 @@
                 largeur: document.getElementById('w').value,
                 profondeur: document.getElementById('p').value,
                 epS: document.getElementById('epS').value,
-                epF: document.getElementById('epF').value,
                 nbShelves: document.getElementById('s').value,
-                recul: document.getElementById('recul').value,
                 hasFond: document.getElementById('hasFond').checked,
-                porteType: document.getElementById('portes').value,
                 color: document.getElementById('colorPicker').value
             };
             localStorage.setItem('meubleProject', JSON.stringify(data));
@@ -230,18 +208,11 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            controls.update();
+            if(controls) controls.update();
             renderer.render(scene, camera);
         }
 
-        window.addEventListener('resize', () => {
-            const container = document.getElementById('three-container');
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-
-        init();
+        window.onload = init;
     </script>
 </body>
 </html>
